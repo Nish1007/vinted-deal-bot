@@ -1,0 +1,532 @@
+# Vinted deal sniper config.
+# Swap what the bot hunts by editing `rotation` (or run: python vinted_bot.py --target designer_jeans).
+# Retail prices are rough UK RRP estimates (GBP) for a typical entry-level piece from each brand.
+# They are the yardstick for "below 20% of retail", so adjust them if you know better.
+
+settings:
+  domain: vinted.co.uk
+  max_ratio: 0.20          # only deals priced at or below this fraction of retail
+  pages: 1                 # result pages (96 listings each) per brand search
+  delay: [2.0, 4.0]        # random pause between requests, in seconds
+  enrich: true             # open each candidate's page to check seller reviews, photos, description
+  accept_title_size: true  # also accept listings whose title says the right size when the size field is wrong
+  price_ceiling: 10        # absolute cap in pounds applied to every target (steals mode); remove or 0 to use each target's own cap
+  min_reviews: 5           # skip sellers with fewer reviews than this (0 = no reviews are fine)
+  exclude_business: true   # skip business/pro seller accounts, keep private sellers
+  hide_risk: []          # e.g. [HIGH] to drop likely-fakes from the report instead of just flagging them
+  notify:
+    discord_webhook: ""    # or set env VINTED_DISCORD_WEBHOOK
+    ntfy_topic: ""         # or set env VINTED_NTFY_TOPIC  (free phone push via ntfy.sh)
+    min_risk: MEDIUM       # only alert on deals at this risk level or lower (LOW < MEDIUM < HIGH)
+
+# The current rotation. Every name here must exist under `targets`.
+rotation:
+  - derschutze_everything
+  - derschutze_floral_jeans
+  - embroidered_baggy_jeans
+  - designer_loafers
+  - designer_jeans
+  - designer_coats
+  - cool_jumpers
+  - youngla_anime_tops
+  - cds_for_you
+
+# Reusable size profiles. field_patterns match Vinted's size field, title_patterns match the listing title.
+sizes:
+  shoes_uk9:
+    label: "Shoes UK 9"
+    field_patterns: ['^(uk\s*)?9(\s*[|/].*)?$']
+    title_patterns: ['\buk\s*9\b(?![.,]\d)', '\beu\s*43\b(?![.,]\d)', '\bsize\s*9\b(?![.,]\d)']
+    reject_field: ['child', 'kid', 'toddler']
+  jeans_w36:
+    label: "Jeans waist 36"
+    field_patterns: ['^(w\s*)?36(\s*[|/x].*)?$', '^w\s*36\b']
+    title_patterns: ['\bw\s*36\b', '\bwaist\s*:?\s*36\b', '\b36\s*(w\b|waist|"|in\b|x\s*\d\d|/\s*\d\d)']
+    reject_field: []
+  coats_l_xl:
+    label: "Coats L / XL"
+    field_patterns: ['^(l|xl)(\s*[|/].*)?$']
+    title_patterns: ['\bsize\s*(xl|l)\b', '\b(xl|l)\s*(mens|men.s)\b']
+    reject_field: []
+
+  jumpers_l_xl:
+    label: "Jumpers L / XL"
+    field_patterns: ['^(l|xl)(\s*[|/].*)?$']
+    title_patterns: ['\bsize\s*(xl|l)\b', '\b(xl|l)\s*(mens|men.s)\b']
+    reject_field: []
+
+  derschutze_sizes:
+    label: "Derschutze sizes (W36 bottoms, L/XL tops)"
+    field_patterns: ['^(w\s*)?36(\s*[|/x].*)?$', '^w\s*36\b', '^(l|xl)(\s*[|/].*)?$']
+    title_patterns: ['\bw\s*36\b', '\bwaist\s*:?\s*36\b', '\bsize\s*(xl|l)\b', '\b36\s*(w\b|x\s*\d\d)']
+    reject_field: []
+
+targets:
+  # Style targets (have `queries`) have no retail price. They use a price cap, your size, and `must_have`:
+  # every regex group below must match somewhere in the listing title or description.
+  embroidered_baggy_jeans:
+    label: "Embroidered baggy jeans"
+    size: jeans_w36
+    category_ids: [257]
+    max_price: 30
+    queries:
+      - embroidered baggy jeans
+      - embroidered loose jeans
+      - embroidered wide leg jeans
+      - embroidered jeans
+      - baggy jeans embroidery
+      - patchwork baggy jeans
+      - y2k embroidered jeans
+    must_have:
+      - 'embroider\w*|appliqu\w*|patchwork|beaded|beading|stitched (design|pattern|detail)'
+      - 'baggy|loose|wide|relaxed|oversized|skater|straight'
+
+  # YoungLA gym tops (oversized, anime graphics) plus lookalike anime gym tops from other brands. L / XL only.
+  youngla_anime_tops:
+    label: "YoungLA / oversized anime gym tops"
+    size: jumpers_l_xl
+    category_ids: []         # all categories (hoodies, tees and jumpers live in different ones)
+    max_price: 35
+    pages: 3
+    title_only: true
+    always_match: 'young\s?-?la\b|youngla|\byla\b'
+    always_requires: 0       # a YoungLA piece still has to be anime (group 0 below) to count
+    # Lines taken from youngla.com: AOT x YLA, Naruto, Demon Slayer, One Punch Man, Yu-Gi-Oh!, Kaiju No. 8, Cyberpunk.
+    # YoungLA calls joggers "sweats". Hoodies, zip-ups, crewnecks, tees, longsleeves, jerseys, windbreakers.
+    queries:
+      - youngla
+      - young la
+      - youngla hoodie
+      - youngla t-shirt
+      - youngla joggers
+      - youngla sweats
+      - youngla sweatshirt
+      - youngla zip up
+      - youngla oversized
+      - young la hoodie
+      - young la t-shirt
+      - youngla anime
+      - youngla anime hoodie
+      - youngla anime t-shirt
+      - youngla anime joggers
+      - youngla anime sweats
+      - youngla attack on titan hoodie
+      - youngla attack on titan tee
+      - youngla attack on titan joggers
+      - youngla aot zip up
+      - youngla aot sherpa
+      - youngla naruto hoodie
+      - youngla naruto tee
+      - youngla naruto sweats
+      - youngla naruto zip up
+      - youngla naruto longsleeve
+      - youngla naruto joggers
+      - youngla naruto windbreaker
+      - youngla demon slayer hoodie
+      - youngla demon slayer tee
+      - youngla demon slayer sweats
+      - youngla demon slayer zip up
+      - youngla demon slayer crewneck
+      - youngla demon slayer joggers
+      - youngla one punch man
+      - youngla one punch man hoodie
+      - youngla yu-gi-oh hoodie
+      - youngla yu-gi-oh tee
+      - youngla yu-gi-oh sweats
+      - youngla kaiju no 8
+      - youngla cyberpunk hoodie
+      - oversized anime gym hoodie
+      - oversized anime gym t-shirt
+      - oversized anime gym joggers
+    must_have:
+      - 'anime|naruto|akatsuki|itachi|sasuke|kakashi|attack on titan|\baot\b|levi|eren|demon slayer|kimetsu|tanjiro|nezuko|rengoku|one punch|saitama|garou|yu-?gi-?oh|dark magician|blue eyes|kaiju|cyberpunk|dragon ?ball|goku|vegeta|one piece|luffy|jujutsu|gojo|sukuna|berserk|bleach|hunter x hunter|baki|tokyo ghoul|jojo|evangelion|chainsaw man'
+      - 'oversized|boxy|gym|gymwear|workout|bodybuilding|muscle|streetwear|hoodie|joggers|sweats|tee|t-?shirt|crewneck|zip'
+
+  # CDs by artists from your Spotify (screenshots), plus Nujabes and artists in his orbit.
+  # No size. Most searches are capped at 10 pounds; Nujabes CDs are collectible so they get a higher cap.
+  cds_for_you:
+    label: "CDs: your artists + Nujabes"
+    category_ids: [3039]     # Entertainment > Music > CDs
+    max_price: 10
+    enrich: false            # skip the per-listing seller check (fast); reviews are shown only if you turn this on
+    pages: 2
+    title_only: true         # the artist must be named in the listing title
+    sort_price: true         # Nujabes first, then cheapest
+    always_match: 'nujabes|samurai champloo|hydeout|metaphorical music|fat jon|force of nature|cise starr|uyama hiroto'
+    queries:
+      - {q: nujabes, max_price: 40}
+      - {q: nujabes cd, max_price: 40}
+      - {q: nujabes modal soul, max_price: 40}
+      - {q: nujabes metaphorical music, max_price: 40}
+      - {q: nujabes spiritual state, max_price: 40}
+      - {q: samurai champloo music record, max_price: 40}
+      - {q: hydeout productions, max_price: 40}
+      - {q: fat jon, max_price: 25}
+      - {q: force of nature cd, max_price: 25}
+      - {q: cise starr, max_price: 25}
+      - {q: uyama hiroto, max_price: 25}
+      - {q: j dilla cd, max_price: 15}
+      - frank ocean cd
+      - mac demarco cd
+      - tame impala cd
+      - kanye west cd
+      - j cole cd
+      - drake cd
+      - the weeknd cd
+      - clairo cd
+      - malcolm todd cd
+      - sidney gish cd
+      - steve lacy cd
+      - tyler the creator cd
+      - kendrick lamar cd
+      - mac miller cd
+      - olivia dean cd
+      - raye cd
+      - brent faiyaz cd
+      - giveon cd
+      - men i trust cd
+      - tv girl cd
+      - beabadoobee cd
+      - jeff buckley cd
+      - the smiths cd
+      - fiona apple cd
+      - faye webster cd
+      - sam fender cd
+      - swedish house mafia cd
+      - michael jackson cd
+      - jackson 5 cd
+    must_have:
+      - '\b(frank ocean|mac ?de ?marco|tame impala|kanye|j\.? ?cole|drake|the weeknd|weeknd|clairo|malcolm todd|sidney gish|steve lacy|tyler,? the creator|kendrick lamar|mac miller|olivia dean|raye|brent faiyaz|giv[eē]on|men i trust|tv girl|beabadoobee|jeff buckley|the smiths|fiona apple|faye webster|sam fender|swedish house mafia|michael jackson|jackson (5|five)|j ?dilla|nujabes|fat jon|force of nature|cise starr|uyama hiroto|samurai champloo)\b'
+
+  # Everything Derschutze (any category, incl. common misspellings) plus lookalike Japanese-themed embroidered pieces.
+  derschutze_everything:
+    label: "Derschutze-style clothing"
+    size: derschutze_sizes
+    category_ids: []         # all categories
+    max_price: 40
+    min_reviews: 5           # Derschutze in your sizes is rare, so a few more sellers are allowed than the 10 default
+    pages: 3
+    title_only: true
+    always_match: 'd[eé]r\s?(sch|sh|ch|tch)(u|ü|ur|tu)tz?|d[eé]rschtuze|derschurtze'
+    queries:
+      - derschutze
+      - dershutze
+      - derchutze
+      - derschutze jeans
+      - derschutze hoodie
+      - derschutze jacket
+      - derschutze long sleeve
+      - derschutze waffle knit
+      - derschutze t-shirt
+      - derschutze jumper
+      - derschutze trousers
+      - derschutze cherry blossom
+      - derschutze koi
+      - derschutze yakuza
+      - japanese embroidered baggy jeans
+      - cherry blossom embroidered baggy jeans
+      - koi fish embroidered jeans
+      - dragon embroidered baggy jeans
+      - sakura embroidered long sleeve
+      - embroidered workwear jacket
+    must_have:
+      - 'embroider\w*|blossom|sakura|koi|dragon|yakuza|japan\w*|lotus|floral'
+      - 'jeans|denim|baggy|wide|hoodie|jacket|long ?sleeve|waffle|knit|jumper|crewneck|workwear|trousers'
+
+  derschutze_floral_jeans:
+    label: "Derschutze / floral embroidered wide-leg jeans"
+    size: jeans_w36
+    category_ids: [257]
+    max_price: 40
+    always_match: 'd[eé]rsch[uü]tze'   # this brand is accepted without needing the wording below
+    queries:
+      - derschutze jeans
+      - derschutze
+      - derschutze embroidered jeans
+      - derschutze wide leg jeans
+      - floral embroidered wide leg jeans
+      - flower embroidered jeans
+      - floral embroidered baggy jeans
+      - black embroidered wide leg jeans
+      - embroidered flower jeans
+    must_have:
+      - 'embroider\w*|floral|flowers?|appliqu\w*|lily|rose'
+      - 'baggy|loose|wide|relaxed|oversized|straight'
+
+  # Japanese-leaning shoes, UK 9. Asics / Onitsuka Tiger come first, then Mizuno, Derschutze, Margiela Tabi.
+  japanese_shoes:
+    label: "Japanese-leaning shoes (Asics first)"
+    size: shoes_uk9
+    category_ids: [1231]     # Men > Shoes
+    max_price: 30
+    pages: 3
+    title_only: true
+    sort_price: true
+    always_match: 'asics|onitsuka'
+    queries:
+      - asics gel kayano
+      - asics gel 1130
+      - asics gel nyc
+      - asics gel lyte
+      - asics gel 1090
+      - asics gel kahana
+      - asics gel sonoma
+      - asics gt 2160
+      - asics gel quantum
+      - asics trainers
+      - asics
+      - onitsuka tiger
+      - onitsuka tiger mexico 66
+      - mizuno
+      - mizuno wave rider
+      - derschutze shoes
+      - maison margiela tabi
+      - margiela tabi
+    must_have:
+      - 'asics|onitsuka|mizuno|d[eé]rsch[uü]tze|margiela|tabi'
+
+  # Dr. Martens, UK 9. Retail is roughly £150-£200, so £40 or under is the "really good value" bar.
+  dr_martens:
+    label: "Dr. Martens (UK 9)"
+    size: shoes_uk9
+    category_ids: [1231]     # Men > Shoes
+    max_price: 40
+    pages: 3
+    title_only: true
+    sort_price: true
+    always_match: 'dr\.?\s?martens|doc\s?martens|\bdocs\b'
+    queries:
+      - dr martens
+      - dr martens 1461
+      - dr martens 1460
+      - dr martens adrian
+      - dr martens kendrick
+      - dr martens loafers
+      - dr martens 2976 chelsea
+      - dr martens jadon
+      - dr martens sinclair
+      - dr martens 1490
+      - dr martens made in england
+      - dr martens penton
+      - dr martens clogs
+      - dr martens sandals
+      - doc martens
+    must_have:
+      - 'dr\.?\s?martens|doc\s?martens|\bdocs\b|1461|1460|2976|adrian|kendrick'
+
+  # Clarks Wallabees and the same family (moc-toe crepe-sole shoes and boots), UK 9. Wallabee retail is about £150.
+  clarks_wallabees:
+    label: "Clarks Wallabees and desert boots (UK 9)"
+    size: shoes_uk9
+    category_ids: [1231]     # Men > Shoes
+    max_price: 40
+    pages: 3
+    title_only: true
+    sort_price: true
+    always_match: 'wallabee|wallabe'
+    queries:
+      - clarks wallabee
+      - clarks originals wallabee
+      - wallabee boot
+      - clarks wallabees suede
+      - clarks wallabee gore-tex
+      - clarks desert boot
+      - clarks desert trek
+      - clarks desert khan
+      - clarks weaver
+      - clarks originals
+      - clarks trek
+      - clarks natalie
+    must_have:
+      - 'wallabee|wallabe|desert (boot|trek|khan|rock)|clarks originals|weaver|clarks'
+
+  # Dr. Martens 1461 smooth Oxford and the Bex (the chunky-soled 1461), UK 9, up to £55.
+  dr_martens_1461_bex:
+    label: "Dr. Martens 1461 smooth / Bex (UK 9)"
+    size: shoes_uk9
+    category_ids: [1231]
+    max_price: 55
+    pages: 3
+    title_only: true
+    sort_price: true
+    always_match: 'bex|1461'
+    queries:
+      - dr martens 1461 smooth
+      - dr martens 1461 oxford
+      - dr martens 1461 bex
+      - dr martens bex
+      - doc martens bex
+      - dr martens 1461 black smooth leather
+      - dr martens 1461 made in england
+      - dr martens 1461 mono
+      - dr martens 1461 3 eye shoe
+      - dr martens oxford shoes
+      - dr martens 1461 cherry red
+      - dr martens 1461 brown
+    must_have:
+      - '1461|bex|oxford|3[- ]eye|smooth'
+      - 'dr\.?\s?martens|doc\s?martens|dr\.?\s?marten|\bdocs\b|1461|bex'
+
+  # Dr. Martens with the signature yellow welt stitching (1461 smooth / Bex / any shoe), UK 9, up to £55.
+  dr_martens_yellow_stitch:
+    label: "Dr. Martens with yellow stitching (UK 9)"
+    size: shoes_uk9
+    category_ids: [1231]
+    max_price: 70
+    pages: 3
+    sort_price: true
+    queries:
+      - dr martens 1461 yellow stitch
+      - dr martens yellow stitching
+      - dr martens 1461 yellow stitching
+      - doc martens yellow stitch oxford
+      - dr martens 1461 smooth yellow
+      - dr martens yellow welt
+      - dr martens 1461 black yellow stitch
+      - dr martens bex yellow stitch
+      - dr martens 1461 oxford
+      - dr martens 1461 smooth
+    must_have:
+      - 'dr\.?\s?marten|doc\s?marten|1461|\bdocs\b'
+      - 'yellow\s*(stitch|welt|thread|seam)|yellow[- ]stitched|contrast stitch'
+
+  # Only the Dr. Martens 1461 smooth Oxford (3-eye lace-up shoe), UK 9, up to £80.
+  dr_martens_1461_smooth80:
+    label: "Dr. Martens 1461 smooth Oxford (UK 9, up to 80)"
+    size: shoes_uk9
+    category_ids: [1231]
+    max_price: 80
+    pages: 3
+    sort_price: true
+    queries:
+      - dr martens 1461 smooth
+      - dr martens 1461 smooth leather oxford
+      - dr martens 1461 black smooth
+      - dr martens 1461 yellow stitch
+      - dr martens 1461 oxford shoes
+      - dr martens 1461 3 eye
+      - dr martens 1461 black leather
+      - doc martens 1461 black
+      - dr martens 1461 size 9
+      - dr martens 1461 uk 9
+    must_have:
+      - 'dr\.?\s?marten|doc\s?marten|1461'
+      - '1461|3[- ]eye'
+      - 'smooth|black leather|black'
+
+  cool_jumpers:
+    label: "Embroidered / statement jumpers"
+    size: jumpers_l_xl
+    category_ids: [79]       # Men > Jumpers & sweaters
+    max_price: 30
+    queries:
+      - embroidered jumper
+      - embroidered knit jumper
+      - embroidered sweater
+      - intarsia jumper
+      - fair isle jumper
+      - patterned knit jumper
+      - vintage graphic knit jumper
+      - oversized embroidered jumper
+    title_only: true         # only check sellers whose listing title names the look (much faster)
+    must_have:
+      - 'embroider\w*|intarsia|fair ?isle|argyle|jacquard|patchwork|nordic|graphic|abstract|aztec|y2k'
+
+  designer_loafers:
+    label: "Designer loafers"
+    size: shoes_uk9
+    category_ids: [2656]     # Men > Shoes > Boat shoes, loafers & moccasins
+    search_suffix: ""        # added after the brand name, e.g. "loafers" (blank = whole category, catches "Gucci Jordaan" style titles)
+    brands:
+      - {name: "Gucci", retail: 750, models: {"jordaan|jorddan|horsebit|1953": 790}}
+      - {name: "Prada", retail: 900}
+      - {name: "Louis Vuitton", aliases: ["louis vuitton", "lv"], retail: 950}
+      - {name: "Dior", retail: 950}
+      - {name: "Hermes", aliases: ["herm[eè]s"], retail: 900}
+      - {name: "Tod's", aliases: ["tod'?s"], retail: 450}
+      - {name: "Ferragamo", aliases: ["ferragamo"], retail: 650}
+      - {name: "Church's", aliases: ["church'?s"], retail: 550}
+      - {name: "Bally", retail: 500}
+      - {name: "Santoni", retail: 750}
+      - {name: "Berluti", retail: 1400}
+      - {name: "Saint Laurent", aliases: ["saint laurent", "ysl", "yves saint laurent"], retail: 750}
+      - {name: "Tom Ford", retail: 900}
+      - {name: "Fendi", retail: 800}
+      - {name: "Bottega Veneta", retail: 800}
+      - {name: "Valentino", retail: 650}
+      - {name: "Versace", retail: 600}
+      - {name: "Dolce & Gabbana", aliases: ["dolce\\s*(&|and)?\\s*gabbana", "d&g"], retail: 550}
+      - {name: "Burberry", retail: 550}
+      - {name: "Jimmy Choo", retail: 600}
+      - {name: "Balenciaga", retail: 650}
+      - {name: "Maison Margiela", aliases: ["margiela"], retail: 650}
+      - {name: "Crockett & Jones", aliases: ["crockett"], retail: 575}
+      - {name: "John Lobb", retail: 1100}
+      - {name: "Edward Green", retail: 1200}
+      - {name: "Brunello Cucinelli", aliases: ["cucinelli"], retail: 900}
+      - {name: "Loro Piana", retail: 800}
+      - {name: "Alexander McQueen", aliases: ["mcqueen"], retail: 600}
+      - {name: "Givenchy", retail: 650}
+      - {name: "Harrys of London", aliases: ["harry'?s of london"], retail: 400}
+      - {name: "Paul Smith", retail: 300}
+
+  designer_jeans:
+    label: "Designer jeans"
+    size: jeans_w36
+    category_ids: [257]      # Men > Jeans
+    search_suffix: ""
+    brands:
+      - {name: "Balmain", retail: 750}
+      - {name: "Amiri", retail: 900}
+      - {name: "Dsquared2", aliases: ["dsquared"], retail: 400}
+      - {name: "Diesel", retail: 160}
+      - {name: "Versace", retail: 450}
+      - {name: "Gucci", retail: 800}
+      - {name: "Dior", retail: 900}
+      - {name: "Prada", retail: 650}
+      - {name: "Saint Laurent", aliases: ["saint laurent", "ysl"], retail: 450}
+      - {name: "Burberry", retail: 350}
+      - {name: "Tom Ford", retail: 500}
+      - {name: "Dolce & Gabbana", aliases: ["dolce\\s*(&|and)?\\s*gabbana", "d&g"], retail: 450}
+      - {name: "Giorgio Armani", retail: 350}
+      - {name: "Evisu", retail: 350}
+      - {name: "Acne Studios", aliases: ["acne"], retail: 250}
+      - {name: "A.P.C.", aliases: ["a\\.?p\\.?c\\.?"], retail: 200}
+      - {name: "Off-White", aliases: ["off[- ]white"], retail: 500}
+      - {name: "Rick Owens", retail: 600}
+      - {name: "Maison Margiela", aliases: ["margiela"], retail: 500}
+      - {name: "Fendi", retail: 700}
+      - {name: "Louis Vuitton", aliases: ["louis vuitton", "lv"], retail: 900}
+      - {name: "Roberto Cavalli", aliases: ["cavalli"], retail: 400}
+      - {name: "Paul Smith", retail: 200}
+
+  designer_coats:
+    label: "Designer coats"
+    size: coats_l_xl
+    category_ids: [2051]     # Men > Outerwear > Coats  (use 1206 to include jackets too)
+    search_suffix: ""
+    brands:
+      - {name: "Moncler", retail: 1400}
+      - {name: "Canada Goose", retail: 1000}
+      - {name: "Burberry", retail: 1500}
+      - {name: "Barbour", retail: 350}
+      - {name: "Stone Island", retail: 600}
+      - {name: "C.P. Company", aliases: ["c\\.?p\\.? company", "cp company"], retail: 450}
+      - {name: "Belstaff", retail: 600}
+      - {name: "Mackintosh", retail: 900}
+      - {name: "Aquascutum", retail: 500}
+      - {name: "Crombie", retail: 500}
+      - {name: "Hackett", retail: 400}
+      - {name: "Paul Smith", retail: 500}
+      - {name: "Hugo Boss", aliases: ["boss"], retail: 400}
+      - {name: "Ralph Lauren", retail: 300}
+      - {name: "Arc'teryx", aliases: ["arc'?teryx"], retail: 500}
+      - {name: "Woolrich", retail: 600}
+      - {name: "Giorgio Armani", retail: 900}
+      - {name: "Emporio Armani", retail: 450}
+      - {name: "Prada", retail: 2000}
+      - {name: "Gucci", retail: 2000}
+      - {name: "Dior", retail: 2500}
+      - {name: "Loro Piana", retail: 2500}
+      - {name: "Brunello Cucinelli", aliases: ["cucinelli"], retail: 2500}
+      - {name: "Tom Ford", retail: 3000}
