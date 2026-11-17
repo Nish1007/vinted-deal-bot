@@ -1,5 +1,7 @@
 # Vinted deal bot
 
+[![tests](https://github.com/Nish1007/vinted-deal-bot/actions/workflows/tests.yml/badge.svg)](https://github.com/Nish1007/vinted-deal-bot/actions/workflows/tests.yml)
+
 A small Python bot that searches Vinted UK for deals and reports the good ones. What it hunts is set in a YAML file, so you can swap items without touching the code.
 
 It does two kinds of hunt:
@@ -11,7 +13,7 @@ Every result is filtered to sellers with real reviews and no business accounts (
 
 ## Setup
 
-Tested on Python 3.12.
+Needs Python 3.12 or newer (the HTML report code uses f-string syntax from 3.12).
 
 ```
 python -m venv venv
@@ -110,6 +112,31 @@ Set `notify.discord_webhook` or `notify.ntfy_topic` in `targets.yaml`, or the en
 ## How it works
 
 Vinted's catalog pages embed their data in Next.js payloads. The bot fetches a catalog search page with a browser-like TLS fingerprint (`curl_cffi`), decodes the embedded listing data, and then opens each candidate listing to read the seller's review count, rating and description. It waits a random 2 to 4 seconds between requests and backs off when Vinted returns 429 or 403. Running two copies at the same time triggers rate limits, so run one at a time.
+
+## Development
+
+```
+pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+The suite has 113 tests and runs in under a second, **fully offline**: the Vinted client is replaced by a fake that returns canned search pages and seller details, so nothing contacts vinted.co.uk. GitHub Actions runs it on every push.
+
+| File | What it covers |
+| --- | --- |
+| `tests/test_matching.py` | brand and alias matching, rejecting "replica" and kids' listings, size matching, every fake-risk rule |
+| `tests/test_client.py` | parsing Vinted's embedded page data, and the polite behaviour: random delay, growing cool-downs on 403 and 429, no retry on other errors |
+| `tests/test_hunt.py` | whole hunts against a fake Vinted: which listings survive the filters, their order, and that rejected listings are never opened |
+| `tests/test_persistence.py` | NEW and PRICE DROP tracking in SQLite, alert filtering, HTML escaping in reports |
+| `tests/test_config.py` | the real `targets.yaml`: every regex compiles, the rotation names real targets, the delay stays polite, no secrets committed |
+
+### Claude Code setup
+
+The repo is set up for working with [Claude Code](https://claude.com/claude-code):
+
+- `CLAUDE.md` describes the layout, the commands and the rules that must not be broken (read-only, polite, no secrets, offline tests).
+- `.claude/agents/` has three subagents: `test-writer` (offline tests, then proves they fail when the code is broken), `code-reviewer` (read-only review against those rules) and `target-tuner` (edits `targets.yaml` and validates it without touching the network).
+- `.claude/settings.json` lets the test suite and `--list` run without prompts, and asks before any command that would contact Vinted.
 
 ## Notes
 
